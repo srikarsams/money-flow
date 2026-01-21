@@ -2,13 +2,13 @@ import '../global.css';
 
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
-import { initDatabase } from '@/src/db';
+import { initDatabase, getSetting } from '@/src/db';
 import { ErrorBoundary } from '@/src/components/ErrorBoundary';
 import { ErrorScreen } from '@/src/components/ui/ErrorScreen';
 
@@ -22,8 +22,11 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const router = useRouter();
+  const segments = useSegments();
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<Error | null>(null);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
@@ -32,6 +35,11 @@ export default function RootLayout() {
     try {
       setDbError(null);
       await initDatabase();
+
+      // Check onboarding status
+      const onboardingStatus = await getSetting('hasCompletedOnboarding');
+      setHasCompletedOnboarding(onboardingStatus === 'true');
+
       setDbReady(true);
     } catch (e) {
       console.error('Failed to initialize database:', e);
@@ -50,6 +58,21 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded, dbReady]);
+
+  // Handle navigation based on onboarding status
+  useEffect(() => {
+    if (!dbReady || hasCompletedOnboarding === null) return;
+
+    const inOnboarding = segments[0] === 'onboarding';
+
+    if (!hasCompletedOnboarding && !inOnboarding) {
+      // User hasn't completed onboarding, redirect to onboarding
+      router.replace('/onboarding');
+    } else if (hasCompletedOnboarding && inOnboarding) {
+      // User has completed onboarding but is on onboarding screen
+      router.replace('/(tabs)');
+    }
+  }, [dbReady, hasCompletedOnboarding, segments]);
 
   // Font loading error
   if (error) {
@@ -97,7 +120,17 @@ function RootLayoutNav() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="expense" options={{ headerShown: false }} />
+        <Stack.Screen name="investment" options={{ headerShown: false }} />
+        <Stack.Screen name="category" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="paywall"
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+          }}
+        />
       </Stack>
     </ThemeProvider>
   );
