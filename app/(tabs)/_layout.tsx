@@ -36,6 +36,7 @@ export default function TabLayout() {
         name="analytics"
         options={{
           title: 'Analytics',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="bar-chart" size={size} color={color} />
           ),
@@ -45,6 +46,7 @@ export default function TabLayout() {
         name="investments"
         options={{
           title: 'Investments',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="trending-up" size={size} color={color} />
           ),
@@ -54,6 +56,7 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: 'Settings',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings" size={size} color={color} />
           ),
