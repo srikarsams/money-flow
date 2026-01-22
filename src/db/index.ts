@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-import { SCHEMA_SQL, DEFAULT_CATEGORIES, DEFAULT_INVESTMENT_TYPES } from './schema';
+import { SCHEMA_SQL, DEFAULT_CATEGORIES, DEFAULT_INCOME_CATEGORIES, DEFAULT_INVESTMENT_TYPES } from './schema';
 
 const DB_NAME = 'moneyflow.db';
 
@@ -31,13 +31,32 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
 // Run database migrations for schema changes
 async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
   // Check if title column exists in expenses table
-  const tableInfo = await database.getAllAsync<{ name: string }>(
+  const expenseTableInfo = await database.getAllAsync<{ name: string }>(
     "PRAGMA table_info(expenses)"
   );
-  const hasTitle = tableInfo.some(col => col.name === 'title');
+  const hasTitle = expenseTableInfo.some(col => col.name === 'title');
+  const hasExpenseType = expenseTableInfo.some(col => col.name === 'type');
 
   if (!hasTitle) {
     await database.execAsync('ALTER TABLE expenses ADD COLUMN title TEXT');
+  }
+
+  // Add type column to expenses table
+  if (!hasExpenseType) {
+    await database.execAsync("ALTER TABLE expenses ADD COLUMN type TEXT NOT NULL DEFAULT 'expense'");
+    await database.execAsync('CREATE INDEX IF NOT EXISTS idx_expenses_type ON expenses(type)');
+  }
+
+  // Check if type column exists in categories table
+  const categoryTableInfo = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(categories)"
+  );
+  const hasCategoryType = categoryTableInfo.some(col => col.name === 'type');
+
+  // Add type column to categories table
+  if (!hasCategoryType) {
+    await database.execAsync("ALTER TABLE categories ADD COLUMN type TEXT NOT NULL DEFAULT 'expense'");
+    await database.execAsync('CREATE INDEX IF NOT EXISTS idx_categories_type ON categories(type)');
   }
 }
 
@@ -51,19 +70,37 @@ export function getDatabase(): SQLite.SQLiteDatabase {
 
 // Seed default categories and investment types
 async function seedDefaultData(database: SQLite.SQLiteDatabase): Promise<void> {
-  // Check if categories exist
-  const categoryCount = await database.getFirstAsync<{ count: number }>(
-    'SELECT COUNT(*) as count FROM categories'
+  // Check if expense categories exist
+  const expenseCategoryCount = await database.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM categories WHERE type = 'expense'"
   );
 
-  if (categoryCount?.count === 0) {
-    // Insert default categories
+  if (expenseCategoryCount?.count === 0) {
+    // Insert default expense categories
     for (let i = 0; i < DEFAULT_CATEGORIES.length; i++) {
       const cat = DEFAULT_CATEGORIES[i];
       await database.runAsync(
-        `INSERT INTO categories (id, name, icon, color, is_custom, is_active, sort_order)
-         VALUES (?, ?, ?, ?, 0, 1, ?)`,
-        [generateId(), cat.name, cat.icon, cat.color, i]
+        `INSERT INTO categories (id, name, icon, color, type, is_custom, is_active, sort_order)
+         VALUES (?, ?, ?, ?, ?, 0, 1, ?)`,
+        [generateId(), cat.name, cat.icon, cat.color, cat.type, i]
+      );
+    }
+  }
+
+  // Check if income categories exist
+  const incomeCategoryCount = await database.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM categories WHERE type = 'income'"
+  );
+
+  if (incomeCategoryCount?.count === 0) {
+    // Insert default income categories
+    const startOrder = DEFAULT_CATEGORIES.length;
+    for (let i = 0; i < DEFAULT_INCOME_CATEGORIES.length; i++) {
+      const cat = DEFAULT_INCOME_CATEGORIES[i];
+      await database.runAsync(
+        `INSERT INTO categories (id, name, icon, color, type, is_custom, is_active, sort_order)
+         VALUES (?, ?, ?, ?, ?, 0, 1, ?)`,
+        [generateId(), cat.name, cat.icon, cat.color, cat.type, startOrder + i]
       );
     }
   }

@@ -427,6 +427,91 @@ export async function getPortfolioSummary(options?: {
   };
 }
 
+// Get all investments by name (all transactions for a specific investment)
+export async function getInvestmentsByName(investmentName: string): Promise<Investment[]> {
+  const db = getDatabase();
+
+  const rows = await db.getAllAsync<InvestmentRow>(
+    `SELECT i.*,
+            t.name as type_name,
+            t.icon as type_icon
+     FROM investments i
+     LEFT JOIN investment_types t ON i.type_id = t.id
+     WHERE i.name = ?
+     ORDER BY i.date DESC, i.created_at DESC`,
+    [investmentName]
+  );
+
+  return rows.map(mapRowToInvestment);
+}
+
+// Get all distinct investment names (for autocomplete)
+export async function getDistinctInvestmentNames(): Promise<string[]> {
+  const db = getDatabase();
+
+  const rows = await db.getAllAsync<{ name: string }>(
+    `SELECT DISTINCT name FROM investments ORDER BY name ASC`
+  );
+
+  return rows.map((row) => row.name);
+}
+
+// Get portfolio value history (sum of all investment values by date)
+export async function getPortfolioValueHistory(
+  limit?: number
+): Promise<{ date: string; totalValue: number }[]> {
+  const db = getDatabase();
+
+  // Get all value records with dates
+  let query = `
+    SELECT
+      DATE(recorded_at) as date,
+      investment_name,
+      current_value
+    FROM investment_values
+    ORDER BY recorded_at ASC
+  `;
+
+  const allRecords = await db.getAllAsync<{
+    date: string;
+    investment_name: string;
+    current_value: number;
+  }>(query);
+
+  if (allRecords.length === 0) return [];
+
+  // Get unique dates
+  const uniqueDates = [...new Set(allRecords.map((r) => r.date))].sort();
+
+  // For each date, calculate total portfolio value
+  // by using the most recent value for each investment as of that date
+  const result: { date: string; totalValue: number }[] = [];
+  const latestValues: Map<string, number> = new Map();
+
+  for (const date of uniqueDates) {
+    // Update latest values with any records on this date
+    const recordsOnDate = allRecords.filter((r) => r.date === date);
+    for (const record of recordsOnDate) {
+      latestValues.set(record.investment_name, record.current_value);
+    }
+
+    // Sum all latest values
+    let totalValue = 0;
+    for (const value of latestValues.values()) {
+      totalValue += value;
+    }
+
+    result.push({ date, totalValue });
+  }
+
+  // Apply limit if specified (return most recent)
+  if (limit && result.length > limit) {
+    return result.slice(-limit);
+  }
+
+  return result;
+}
+
 // Get total invested amount
 export async function getTotalInvested(options?: {
   startDate?: string;

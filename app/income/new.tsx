@@ -8,7 +8,7 @@ import { Category, ExpenseInput } from '@/src/types';
 import { getAllCategories } from '@/src/db/queries/categories';
 import { createExpense } from '@/src/db/queries/expenses';
 
-export default function NewExpenseScreen() {
+export default function NewIncomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -21,7 +21,7 @@ export default function NewExpenseScreen() {
 
   const loadCategories = async () => {
     try {
-      const cats = await getAllCategories('expense');
+      const cats = await getAllCategories('income');
       setCategories(cats);
     } catch (error) {
       console.error('Failed to load categories:', error);
@@ -34,8 +34,8 @@ export default function NewExpenseScreen() {
       await createExpense(data);
       router.back();
     } catch (error) {
-      console.error('Failed to create expense:', error);
-      Alert.alert('Error', 'Failed to save expense. Please try again.');
+      console.error('Failed to create income:', error);
+      Alert.alert('Error', 'Failed to save income. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -55,8 +55,8 @@ export default function NewExpenseScreen() {
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         loading={loading}
-        submitLabel="Add Expense"
-        type="expense"
+        submitLabel="Add Income"
+        type="income"
       />
     </View>
   );

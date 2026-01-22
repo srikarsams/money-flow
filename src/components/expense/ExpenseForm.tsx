@@ -16,7 +16,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { CategoryPicker } from './CategoryPicker';
-import { Category, ExpenseInput } from '@/src/types';
+import { Category, ExpenseInput, TransactionType } from '@/src/types';
 import { useTheme } from '@/src/hooks/useTheme';
 
 interface ExpenseFormProps {
@@ -26,6 +26,7 @@ interface ExpenseFormProps {
   onCancel: () => void;
   loading?: boolean;
   submitLabel?: string;
+  type?: TransactionType;
 }
 
 export function ExpenseForm({
@@ -35,8 +36,10 @@ export function ExpenseForm({
   onCancel,
   loading = false,
   submitLabel = 'Add Expense',
+  type = 'expense',
 }: ExpenseFormProps) {
   const { isDark, colors } = useTheme();
+  const isIncome = type === 'income';
 
   const [title, setTitle] = useState(initialData?.title ?? '');
   const [amount, setAmount] = useState(initialData?.amount?.toString() ?? '');
@@ -136,6 +139,7 @@ export function ExpenseForm({
       title: title.trim() || undefined,
       amount: parseFloat(amount),
       categoryId: selectedCategory!.id,
+      type,
       date: date.toISOString().split('T')[0],
       notes: notes.trim() || undefined,
       imageUri,
@@ -167,17 +171,17 @@ export function ExpenseForm({
               ${errors.amount ? 'border-red-500' : 'border-transparent'}
             `}
           >
-            <Text className="text-2xl text-slate-500 dark:text-slate-400 mr-2">
-              $
+            <Text className={`text-2xl mr-2 ${isIncome ? 'text-green-500' : 'text-slate-500 dark:text-slate-400'}`}>
+              {isIncome ? '+$' : '$'}
             </Text>
             <TextInput
-              className="flex-1 py-3 text-2xl text-slate-900 dark:text-white"
+              className={`flex-1 py-3 text-2xl ${isIncome ? 'text-green-600 dark:text-green-400' : 'text-slate-900 dark:text-white'}`}
               placeholder="0.00"
               placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
-              selectionColor={colors.primary}
+              selectionColor={isIncome ? '#10B981' : colors.primary}
             />
           </View>
           {errors.amount && (

@@ -1,4 +1,5 @@
 import { getDatabase } from '../index';
+import { TransactionType } from '@/src/types';
 
 export interface CategoryTotal {
   categoryId: string;
@@ -26,6 +27,7 @@ export interface MonthlyTotal {
 export async function getExpensesByCategory(options?: {
   startDate?: string;
   endDate?: string;
+  type?: TransactionType;
 }): Promise<CategoryTotal[]> {
   const db = getDatabase();
 
@@ -52,6 +54,14 @@ export async function getExpensesByCategory(options?: {
   if (options?.endDate) {
     conditions.push('(e.date <= ? OR e.id IS NULL)');
     params.push(options.endDate);
+  }
+
+  if (options?.type) {
+    conditions.push('(e.type = ? OR e.id IS NULL)');
+    params.push(options.type);
+    // Also filter categories by type
+    conditions.push('c.type = ?');
+    params.push(options.type);
   }
 
   if (conditions.length > 0) {
@@ -91,6 +101,7 @@ export async function getDailyTotals(options?: {
   startDate?: string;
   endDate?: string;
   categoryIds?: string[];
+  type?: TransactionType;
   limit?: number;
 }): Promise<DailyTotal[]> {
   const db = getDatabase();
@@ -122,6 +133,11 @@ export async function getDailyTotals(options?: {
     params.push(...options.categoryIds);
   }
 
+  if (options?.type) {
+    query += ' AND type = ?';
+    params.push(options.type);
+  }
+
   query += ' GROUP BY date ORDER BY date DESC';
 
   if (options?.limit) {
@@ -146,6 +162,7 @@ export async function getMonthlyTotals(options?: {
   startDate?: string;
   endDate?: string;
   categoryIds?: string[];
+  type?: TransactionType;
   limit?: number;
 }): Promise<MonthlyTotal[]> {
   const db = getDatabase();
@@ -178,6 +195,11 @@ export async function getMonthlyTotals(options?: {
     params.push(...options.categoryIds);
   }
 
+  if (options?.type) {
+    query += ' AND type = ?';
+    params.push(options.type);
+  }
+
   query += ' GROUP BY year, month ORDER BY year DESC, month DESC';
 
   if (options?.limit) {
@@ -204,6 +226,7 @@ export async function getTotalExpenses(options?: {
   startDate?: string;
   endDate?: string;
   categoryIds?: string[];
+  type?: TransactionType;
 }): Promise<{ total: number; count: number }> {
   const db = getDatabase();
 
@@ -226,6 +249,11 @@ export async function getTotalExpenses(options?: {
     params.push(...options.categoryIds);
   }
 
+  if (options?.type) {
+    query += ' AND type = ?';
+    params.push(options.type);
+  }
+
   const result = await db.getFirstAsync<{ total: number; count: number }>(query, params);
   return { total: result?.total ?? 0, count: result?.count ?? 0 };
 }
@@ -234,6 +262,7 @@ export async function getAverageDaily(options?: {
   startDate?: string;
   endDate?: string;
   categoryIds?: string[];
+  type?: TransactionType;
 }): Promise<number> {
   const db = getDatabase();
 
@@ -261,6 +290,11 @@ export async function getAverageDaily(options?: {
     const placeholders = options.categoryIds.map(() => '?').join(',');
     query += ` AND category_id IN (${placeholders})`;
     params.push(...options.categoryIds);
+  }
+
+  if (options?.type) {
+    query += ' AND type = ?';
+    params.push(options.type);
   }
 
   query += ' GROUP BY date)';

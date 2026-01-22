@@ -1,15 +1,12 @@
 import '../global.css';
 
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/components/useColorScheme';
-import { initDatabase, getSetting } from '@/src/db';
-import { ErrorBoundary } from '@/src/components/ErrorBoundary';
+import { initDatabase } from '@/src/db';
 import { ErrorScreen } from '@/src/components/ui/ErrorScreen';
 
 // Custom ErrorBoundary export for expo-router
@@ -22,11 +19,8 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const router = useRouter();
-  const segments = useSegments();
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<Error | null>(null);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
@@ -35,16 +29,10 @@ export default function RootLayout() {
     try {
       setDbError(null);
       await initDatabase();
-
-      // Check onboarding status
-      const onboardingStatus = await getSetting('hasCompletedOnboarding');
-      setHasCompletedOnboarding(onboardingStatus === 'true');
-
       setDbReady(true);
     } catch (e) {
       console.error('Failed to initialize database:', e);
       setDbError(e as Error);
-      // Still hide splash screen so user sees the error
       SplashScreen.hideAsync();
     }
   };
@@ -59,79 +47,42 @@ export default function RootLayout() {
     }
   }, [loaded, dbReady]);
 
-  // Handle navigation based on onboarding status
-  useEffect(() => {
-    if (!dbReady || hasCompletedOnboarding === null) return;
-
-    const inOnboarding = segments[0] === 'onboarding';
-
-    if (!hasCompletedOnboarding && !inOnboarding) {
-      // User hasn't completed onboarding, redirect to onboarding
-      router.replace('/onboarding');
-    } else if (hasCompletedOnboarding && inOnboarding) {
-      // User has completed onboarding but is on onboarding screen
-      router.replace('/(tabs)');
-    }
-  }, [dbReady, hasCompletedOnboarding, segments]);
-
-  // Font loading error
+  // Font loading error - show error inside navigation context
   if (error) {
     return (
-      <ErrorScreen
-        title="Failed to Load"
-        message="The app couldn't load properly. Please restart the app."
-        onRetry={() => {
-          // Reload the app
-          if (typeof window !== 'undefined') {
-            window.location.reload();
-          }
-        }}
-      />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+      </Stack>
     );
   }
 
-  // Database initialization error
+  // Database initialization error - show error inside navigation context
   if (dbError) {
     return (
-      <ErrorScreen
-        title="Database Error"
-        message="Failed to initialize the database. Your data may not be accessible. Please try again."
-        onRetry={initDB}
-      />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+      </Stack>
     );
   }
 
-  // Still loading
+  // Still loading - must still return Stack to establish navigation context
   if (!loaded || !dbReady) {
-    return null;
+    return (
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    );
   }
 
   return (
-    <ErrorBoundary>
-      <RootLayoutNav />
-    </ErrorBoundary>
-  );
-}
-
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="expense" options={{ headerShown: false }} />
-        <Stack.Screen name="investment" options={{ headerShown: false }} />
-        <Stack.Screen name="category" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="paywall"
-          options={{
-            headerShown: false,
-            presentation: 'modal',
-          }}
-        />
-      </Stack>
-    </ThemeProvider>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="onboarding" />
+      <Stack.Screen name="expense" />
+      <Stack.Screen name="income" />
+      <Stack.Screen name="investment" />
+      <Stack.Screen name="category" />
+      <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
+    </Stack>
   );
 }

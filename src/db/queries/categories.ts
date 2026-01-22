@@ -1,11 +1,12 @@
 import { getDatabase, generateId } from '../index';
-import { Category } from '@/src/types';
+import { Category, TransactionType } from '@/src/types';
 
 interface CategoryRow {
   id: string;
   name: string;
   icon: string;
   color: string;
+  type: TransactionType;
   is_custom: number;
   is_active: number;
   sort_order: number;
@@ -19,6 +20,7 @@ function mapRowToCategory(row: CategoryRow): Category {
     name: row.name,
     icon: row.icon,
     color: row.color,
+    type: row.type || 'expense',
     isCustom: row.is_custom === 1,
     isActive: row.is_active === 1,
     sortOrder: row.sort_order,
@@ -27,11 +29,20 @@ function mapRowToCategory(row: CategoryRow): Category {
   };
 }
 
-export async function getAllCategories(): Promise<Category[]> {
+export async function getAllCategories(type?: TransactionType): Promise<Category[]> {
   const db = getDatabase();
-  const rows = await db.getAllAsync<CategoryRow>(
-    'SELECT * FROM categories WHERE is_active = 1 ORDER BY sort_order ASC'
-  );
+
+  let query = 'SELECT * FROM categories WHERE is_active = 1';
+  const params: string[] = [];
+
+  if (type) {
+    query += ' AND type = ?';
+    params.push(type);
+  }
+
+  query += ' ORDER BY sort_order ASC';
+
+  const rows = await db.getAllAsync<CategoryRow>(query, params);
   return rows.map(mapRowToCategory);
 }
 
@@ -47,7 +58,8 @@ export async function getCategoryById(id: string): Promise<Category | null> {
 export async function createCategory(
   name: string,
   icon: string,
-  color: string
+  color: string,
+  type: TransactionType = 'expense'
 ): Promise<Category> {
   const db = getDatabase();
   const id = generateId();
@@ -60,9 +72,9 @@ export async function createCategory(
   const sortOrder = (maxOrder?.max_order ?? -1) + 1;
 
   await db.runAsync(
-    `INSERT INTO categories (id, name, icon, color, is_custom, is_active, sort_order, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 1, 1, ?, ?, ?)`,
-    [id, name, icon, color, sortOrder, now, now]
+    `INSERT INTO categories (id, name, icon, color, type, is_custom, is_active, sort_order, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 1, 1, ?, ?, ?)`,
+    [id, name, icon, color, type, sortOrder, now, now]
   );
 
   return {
@@ -70,6 +82,7 @@ export async function createCategory(
     name,
     icon,
     color,
+    type,
     isCustom: true,
     isActive: true,
     sortOrder,

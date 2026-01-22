@@ -1,20 +1,31 @@
 // Default expense categories
 export const DEFAULT_CATEGORIES = [
-  { name: 'Food & Dining', icon: 'restaurant', color: '#EF4444' },
-  { name: 'Groceries', icon: 'cart', color: '#F97316' },
-  { name: 'Transportation', icon: 'car', color: '#3B82F6' },
-  { name: 'Utilities', icon: 'flash', color: '#FBBF24' },
-  { name: 'Rent/Mortgage', icon: 'home', color: '#8B5CF6' },
-  { name: 'Shopping', icon: 'bag', color: '#EC4899' },
-  { name: 'Entertainment', icon: 'game-controller', color: '#06B6D4' },
-  { name: 'Health & Fitness', icon: 'fitness', color: '#10B981' },
-  { name: 'Personal Care', icon: 'body', color: '#F472B6' },
-  { name: 'Bills & Subscriptions', icon: 'receipt', color: '#6366F1' },
-  { name: 'Insurance', icon: 'shield-checkmark', color: '#14B8A6' },
-  { name: 'Education', icon: 'school', color: '#A855F7' },
-  { name: 'Travel', icon: 'airplane', color: '#0EA5E9' },
-  { name: 'Gifts & Donations', icon: 'gift', color: '#F43F5E' },
-  { name: 'Miscellaneous', icon: 'ellipsis-horizontal', color: '#6B7280' },
+  { name: 'Food & Dining', icon: 'restaurant', color: '#EF4444', type: 'expense' },
+  { name: 'Groceries', icon: 'cart', color: '#F97316', type: 'expense' },
+  { name: 'Transportation', icon: 'car', color: '#3B82F6', type: 'expense' },
+  { name: 'Utilities', icon: 'flash', color: '#FBBF24', type: 'expense' },
+  { name: 'Rent/Mortgage', icon: 'home', color: '#8B5CF6', type: 'expense' },
+  { name: 'Shopping', icon: 'bag', color: '#EC4899', type: 'expense' },
+  { name: 'Entertainment', icon: 'game-controller', color: '#06B6D4', type: 'expense' },
+  { name: 'Health & Fitness', icon: 'fitness', color: '#10B981', type: 'expense' },
+  { name: 'Personal Care', icon: 'body', color: '#F472B6', type: 'expense' },
+  { name: 'Bills & Subscriptions', icon: 'receipt', color: '#6366F1', type: 'expense' },
+  { name: 'Insurance', icon: 'shield-checkmark', color: '#14B8A6', type: 'expense' },
+  { name: 'Education', icon: 'school', color: '#A855F7', type: 'expense' },
+  { name: 'Travel', icon: 'airplane', color: '#0EA5E9', type: 'expense' },
+  { name: 'Gifts & Donations', icon: 'gift', color: '#F43F5E', type: 'expense' },
+  { name: 'Miscellaneous', icon: 'ellipsis-horizontal', color: '#6B7280', type: 'expense' },
+];
+
+// Default income categories
+export const DEFAULT_INCOME_CATEGORIES = [
+  { name: 'Salary', icon: 'cash', color: '#10B981', type: 'income' },
+  { name: 'Freelance', icon: 'laptop', color: '#06B6D4', type: 'income' },
+  { name: 'Investments', icon: 'trending-up', color: '#8B5CF6', type: 'income' },
+  { name: 'Rental Income', icon: 'home', color: '#F97316', type: 'income' },
+  { name: 'Gifts Received', icon: 'gift', color: '#EC4899', type: 'income' },
+  { name: 'Refunds', icon: 'arrow-undo', color: '#3B82F6', type: 'income' },
+  { name: 'Other Income', icon: 'ellipsis-horizontal', color: '#6B7280', type: 'income' },
 ];
 
 // Default investment types
@@ -36,6 +47,7 @@ CREATE TABLE IF NOT EXISTS categories (
   name TEXT NOT NULL,
   icon TEXT NOT NULL,
   color TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'expense' CHECK(type IN ('expense', 'income')),
   is_custom INTEGER DEFAULT 0,
   is_active INTEGER DEFAULT 1,
   sort_order INTEGER DEFAULT 0,
@@ -43,12 +55,13 @@ CREATE TABLE IF NOT EXISTS categories (
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
--- Expenses table
+-- Expenses table (also stores income transactions)
 CREATE TABLE IF NOT EXISTS expenses (
   id TEXT PRIMARY KEY,
   title TEXT,
   amount REAL NOT NULL,
   category_id TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'expense' CHECK(type IN ('expense', 'income')),
   notes TEXT,
   image_uri TEXT,
   date TEXT NOT NULL,
@@ -97,6 +110,8 @@ CREATE TABLE IF NOT EXISTS settings (
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
 CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_type ON expenses(type);
+CREATE INDEX IF NOT EXISTS idx_categories_type ON categories(type);
 CREATE INDEX IF NOT EXISTS idx_investments_date ON investments(date);
 CREATE INDEX IF NOT EXISTS idx_investments_name ON investments(name);
 CREATE INDEX IF NOT EXISTS idx_investment_values_name ON investment_values(investment_name);

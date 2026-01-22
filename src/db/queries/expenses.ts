@@ -1,5 +1,5 @@
 import { getDatabase, generateId } from '../index';
-import { Expense, ExpenseInput, Category } from '@/src/types';
+import { Expense, ExpenseInput, Category, TransactionType } from '@/src/types';
 import { deleteImage, persistImage } from '@/src/services/imageService';
 
 interface ExpenseRow {
@@ -7,6 +7,7 @@ interface ExpenseRow {
   title: string | null;
   amount: number;
   category_id: string;
+  type: TransactionType;
   notes: string | null;
   image_uri: string | null;
   date: string;
@@ -16,6 +17,7 @@ interface ExpenseRow {
   category_name?: string;
   category_icon?: string;
   category_color?: string;
+  category_type?: TransactionType;
 }
 
 function mapRowToExpense(row: ExpenseRow): Expense {
@@ -24,6 +26,7 @@ function mapRowToExpense(row: ExpenseRow): Expense {
     title: row.title ?? undefined,
     amount: row.amount,
     categoryId: row.category_id,
+    type: row.type || 'expense',
     notes: row.notes ?? undefined,
     imageUri: row.image_uri ?? undefined,
     date: row.date,
@@ -37,6 +40,7 @@ function mapRowToExpense(row: ExpenseRow): Expense {
       name: row.category_name,
       icon: row.category_icon || '',
       color: row.category_color || '',
+      type: row.category_type || 'expense',
       isCustom: false,
       isActive: true,
       sortOrder: 0,
@@ -54,6 +58,7 @@ export async function getAllExpenses(options?: {
   startDate?: string;
   endDate?: string;
   categoryId?: string;
+  type?: TransactionType;
 }): Promise<Expense[]> {
   const db = getDatabase();
 
@@ -61,7 +66,8 @@ export async function getAllExpenses(options?: {
     SELECT e.*,
            c.name as category_name,
            c.icon as category_icon,
-           c.color as category_color
+           c.color as category_color,
+           c.type as category_type
     FROM expenses e
     LEFT JOIN categories c ON e.category_id = c.id
     WHERE 1=1
@@ -81,6 +87,11 @@ export async function getAllExpenses(options?: {
   if (options?.categoryId) {
     query += ' AND e.category_id = ?';
     params.push(options.categoryId);
+  }
+
+  if (options?.type) {
+    query += ' AND e.type = ?';
+    params.push(options.type);
   }
 
   query += ' ORDER BY e.date DESC, e.created_at DESC';
@@ -105,7 +116,8 @@ export async function getExpenseById(id: string): Promise<Expense | null> {
     `SELECT e.*,
             c.name as category_name,
             c.icon as category_icon,
-            c.color as category_color
+            c.color as category_color,
+            c.type as category_type
      FROM expenses e
      LEFT JOIN categories c ON e.category_id = c.id
      WHERE e.id = ?`,
@@ -126,13 +138,14 @@ export async function createExpense(input: ExpenseInput): Promise<Expense> {
   }
 
   await db.runAsync(
-    `INSERT INTO expenses (id, title, amount, category_id, notes, image_uri, date, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO expenses (id, title, amount, category_id, type, notes, image_uri, date, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.title ?? null,
       input.amount,
       input.categoryId,
+      input.type,
       input.notes ?? null,
       imageUri,
       input.date,
@@ -218,38 +231,47 @@ export async function deleteExpense(id: string): Promise<void> {
   await db.runAsync('DELETE FROM expenses WHERE id = ?', [id]);
 }
 
-export async function getTodayTotal(): Promise<number> {
+export async function getTodayTotal(type?: TransactionType): Promise<number> {
   const db = getDatabase();
   const today = new Date().toISOString().split('T')[0];
 
-  const result = await db.getFirstAsync<{ total: number | null }>(
-    'SELECT SUM(amount) as total FROM expenses WHERE date = ?',
-    [today]
-  );
+  let query = 'SELECT SUM(amount) as total FROM expenses WHERE date = ?';
+  const params: (string)[] = [today];
 
+  if (type) {
+    query += ' AND type = ?';
+    params.push(type);
+  }
+
+  const result = await db.getFirstAsync<{ total: number | null }>(query, params);
   return result?.total ?? 0;
 }
 
-export async function getMonthTotal(year: number, month: number): Promise<number> {
+export async function getMonthTotal(year: number, month: number, type?: TransactionType): Promise<number> {
   const db = getDatabase();
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
   const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
 
-  const result = await db.getFirstAsync<{ total: number | null }>(
-    'SELECT SUM(amount) as total FROM expenses WHERE date >= ? AND date <= ?',
-    [startDate, endDate]
-  );
+  let query = 'SELECT SUM(amount) as total FROM expenses WHERE date >= ? AND date <= ?';
+  const params: (string)[] = [startDate, endDate];
 
+  if (type) {
+    query += ' AND type = ?';
+    params.push(type);
+  }
+
+  const result = await db.getFirstAsync<{ total: number | null }>(query, params);
   return result?.total ?? 0;
 }
 
 export async function getExpensesByDateRange(
   startDate: string,
-  endDate: string
+  endDate: string,
+  type?: TransactionType
 ): Promise<Expense[]> {
-  return getAllExpenses({ startDate, endDate });
+  return getAllExpenses({ startDate, endDate, type });
 }
 
-export async function getRecentExpenses(limit: number = 10): Promise<Expense[]> {
-  return getAllExpenses({ limit });
+export async function getRecentExpenses(limit: number = 10, type?: TransactionType): Promise<Expense[]> {
+  return getAllExpenses({ limit, type });
 }

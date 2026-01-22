@@ -13,13 +13,13 @@ import { getExpenseById, updateExpense, deleteExpense } from '@/src/db/queries/e
 import { getAllCategories } from '@/src/db/queries/categories';
 import { useTheme } from '@/src/hooks/useTheme';
 
-export default function ExpenseDetailScreen() {
+export default function IncomeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
 
-  const [expense, setExpense] = useState<Expense | null>(null);
+  const [income, setIncome] = useState<Expense | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -32,14 +32,14 @@ export default function ExpenseDetailScreen() {
 
   const loadData = async () => {
     try {
-      const [exp, cats] = await Promise.all([
+      const [inc, cats] = await Promise.all([
         getExpenseById(id),
-        getAllCategories('expense'),
+        getAllCategories('income'),
       ]);
-      setExpense(exp);
+      setIncome(inc);
       setCategories(cats);
     } catch (error) {
-      console.error('Failed to load expense:', error);
+      console.error('Failed to load income:', error);
     } finally {
       setLoading(false);
     }
@@ -49,11 +49,11 @@ export default function ExpenseDetailScreen() {
     setUpdating(true);
     try {
       const updated = await updateExpense(id, data);
-      setExpense(updated);
+      setIncome(updated);
       setIsEditing(false);
     } catch (error) {
-      console.error('Failed to update expense:', error);
-      Alert.alert('Error', 'Failed to update expense. Please try again.');
+      console.error('Failed to update income:', error);
+      Alert.alert('Error', 'Failed to update income. Please try again.');
     } finally {
       setUpdating(false);
     }
@@ -61,8 +61,8 @@ export default function ExpenseDetailScreen() {
 
   const handleDelete = () => {
     Alert.alert(
-      'Delete Expense',
-      'Are you sure you want to delete this expense?',
+      'Delete Income',
+      'Are you sure you want to delete this income?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -73,8 +73,8 @@ export default function ExpenseDetailScreen() {
               await deleteExpense(id);
               router.back();
             } catch (error) {
-              console.error('Failed to delete expense:', error);
-              Alert.alert('Error', 'Failed to delete expense.');
+              console.error('Failed to delete income:', error);
+              Alert.alert('Error', 'Failed to delete income.');
             }
           },
         },
@@ -106,11 +106,11 @@ export default function ExpenseDetailScreen() {
     );
   }
 
-  if (!expense) {
+  if (!income) {
     return (
       <View className="flex-1 bg-white dark:bg-slate-900 items-center justify-center px-4">
         <Text className="text-slate-500 dark:text-slate-400 text-center">
-          Expense not found
+          Income not found
         </Text>
         <Button title="Go Back" onPress={() => router.back()} variant="secondary" />
       </View>
@@ -126,20 +126,20 @@ export default function ExpenseDetailScreen() {
         <ExpenseForm
           categories={categories}
           initialData={{
-            title: expense.title,
-            amount: expense.amount,
-            categoryId: expense.categoryId,
-            category: expense.category,
-            type: expense.type,
-            date: expense.date,
-            notes: expense.notes,
-            imageUri: expense.imageUri,
+            title: income.title,
+            amount: income.amount,
+            categoryId: income.categoryId,
+            category: income.category,
+            type: income.type,
+            date: income.date,
+            notes: income.notes,
+            imageUri: income.imageUri,
           }}
           onSubmit={handleUpdate}
           onCancel={() => setIsEditing(false)}
           loading={updating}
           submitLabel="Update"
-          type="expense"
+          type="income"
         />
       </View>
     );
@@ -156,25 +156,25 @@ export default function ExpenseDetailScreen() {
           <View
             className="w-20 h-20 rounded-full items-center justify-center mb-4"
             style={{
-              backgroundColor: (expense.category?.color || '#6B7280') + '20',
+              backgroundColor: (income.category?.color || '#10B981') + '20',
             }}
           >
             <Ionicons
-              name={(expense.category?.icon as any) || 'ellipsis-horizontal'}
+              name={(income.category?.icon as any) || 'cash'}
               size={40}
-              color={expense.category?.color || '#6B7280'}
+              color={income.category?.color || '#10B981'}
             />
           </View>
-          <Text className="text-3xl font-bold text-red-500 dark:text-red-400">
-            -${formatAmount(expense.amount)}
+          <Text className="text-3xl font-bold text-green-500 dark:text-green-400">
+            +${formatAmount(income.amount)}
           </Text>
-          {expense.title && (
+          {income.title && (
             <Text className="text-lg font-medium text-slate-900 dark:text-white mt-2">
-              {expense.title}
+              {income.title}
             </Text>
           )}
           <Text className="text-base text-slate-500 dark:text-slate-400 mt-1">
-            {expense.category?.name || 'Uncategorized'}
+            {income.category?.name || 'Uncategorized'}
           </Text>
         </View>
 
@@ -184,17 +184,17 @@ export default function ExpenseDetailScreen() {
             <View className="flex-row justify-between">
               <Text className="text-slate-500 dark:text-slate-400">Date</Text>
               <Text className="text-slate-900 dark:text-white font-medium">
-                {formatDate(expense.date)}
+                {formatDate(income.date)}
               </Text>
             </View>
 
-            {expense.notes && (
+            {income.notes && (
               <View>
                 <Text className="text-slate-500 dark:text-slate-400 mb-1">
                   Notes
                 </Text>
                 <Text className="text-slate-900 dark:text-white">
-                  {expense.notes}
+                  {income.notes}
                 </Text>
               </View>
             )}
@@ -202,14 +202,14 @@ export default function ExpenseDetailScreen() {
         </Card>
 
         {/* Image */}
-        {expense.imageUri && (
+        {income.imageUri && (
           <TouchableOpacity
             onPress={() => setShowImageViewer(true)}
             activeOpacity={0.9}
           >
             <Card className="mb-4 p-0 overflow-hidden">
               <Image
-                source={{ uri: expense.imageUri }}
+                source={{ uri: income.imageUri }}
                 className="w-full h-64"
                 resizeMode="cover"
               />
@@ -255,10 +255,10 @@ export default function ExpenseDetailScreen() {
       </View>
 
       {/* Full Screen Image Viewer */}
-      {expense.imageUri && (
+      {income.imageUri && (
         <ImageViewer
           visible={showImageViewer}
-          imageUri={expense.imageUri}
+          imageUri={income.imageUri}
           onClose={() => setShowImageViewer(false)}
         />
       )}

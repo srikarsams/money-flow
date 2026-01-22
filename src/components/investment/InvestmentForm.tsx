@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { Input } from '../ui/Input';
 import { InvestmentTypePicker, getInvestmentTypeColor } from './InvestmentTypePicker';
 import { InvestmentTypeItem, InvestmentInput } from '@/src/types';
 import { useTheme } from '@/src/hooks/useTheme';
+import { getDistinctInvestmentNames } from '@/src/db/queries/investments';
 
 interface InvestmentFormProps {
   types: InvestmentTypeItem[];
@@ -26,6 +27,8 @@ interface InvestmentFormProps {
   onCancel: () => void;
   loading?: boolean;
   submitLabel?: string;
+  nameLocked?: boolean;
+  existingNames?: string[];
 }
 
 export function InvestmentForm({
@@ -35,6 +38,8 @@ export function InvestmentForm({
   onCancel,
   loading = false,
   submitLabel = 'Add Investment',
+  nameLocked = false,
+  existingNames: providedNames,
 }: InvestmentFormProps) {
   const { isDark, colors } = useTheme();
 
@@ -52,6 +57,43 @@ export function InvestmentForm({
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; amount?: string; type?: string }>({});
+
+  const [existingNames, setExistingNames] = useState<string[]>(providedNames ?? []);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!providedNames && !nameLocked) {
+      loadExistingNames();
+    }
+  }, [providedNames, nameLocked]);
+
+  const loadExistingNames = async () => {
+    try {
+      const names = await getDistinctInvestmentNames();
+      setExistingNames(names);
+    } catch (error) {
+      console.error('Failed to load existing names:', error);
+    }
+  };
+
+  const handleNameChange = (text: string) => {
+    setName(text);
+    if (text.length > 0 && existingNames.length > 0) {
+      const filtered = existingNames.filter((n) =>
+        n.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  const selectSuggestion = (suggestion: string) => {
+    setName(suggestion);
+    setShowSuggestions(false);
+  };
 
   const formatDate = (d: Date) => {
     return d.toLocaleDateString('en-US', {
@@ -150,13 +192,64 @@ export function InvestmentForm({
       <View className="gap-5 pb-6">
         {/* Investment Name */}
         <View>
-          <Input
-            label="Investment Name"
-            placeholder="e.g., HDFC Flexi Cap, AAPL, Bitcoin"
-            value={name}
-            onChangeText={setName}
-            error={errors.name}
-          />
+          <Text className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            Investment Name
+          </Text>
+          <View className="relative">
+            <TextInput
+              className={`
+                bg-slate-100 dark:bg-slate-700
+                rounded-xl px-4 py-3
+                text-base text-slate-900 dark:text-white
+                border
+                ${errors.name ? 'border-red-500' : 'border-transparent'}
+                ${nameLocked ? 'opacity-70' : ''}
+              `}
+              placeholder="e.g., HDFC Flexi Cap, AAPL, Bitcoin"
+              placeholderTextColor={isDark ? '#94A3B8' : '#9CA3AF'}
+              value={name}
+              onChangeText={handleNameChange}
+              editable={!nameLocked}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              onFocus={() => {
+                if (name.length > 0 && filteredSuggestions.length > 0) {
+                  setShowSuggestions(true);
+                }
+              }}
+            />
+            {nameLocked && (
+              <View className="absolute right-3 top-3">
+                <Ionicons name="lock-closed" size={18} color={isDark ? '#94A3B8' : '#6B7280'} />
+              </View>
+            )}
+            {showSuggestions && filteredSuggestions.length > 0 && (
+              <View
+                className="absolute top-full left-0 right-0 bg-white dark:bg-slate-800 rounded-xl mt-1 border border-slate-200 dark:border-slate-600 shadow-lg z-10"
+                style={{ maxHeight: 200 }}
+              >
+                <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                  {filteredSuggestions.map((suggestion, index) => (
+                    <TouchableOpacity
+                      key={suggestion}
+                      onPress={() => selectSuggestion(suggestion)}
+                      className={`px-4 py-3 ${
+                        index < filteredSuggestions.length - 1
+                          ? 'border-b border-slate-100 dark:border-slate-700'
+                          : ''
+                      }`}
+                    >
+                      <Text className="text-base text-slate-900 dark:text-white">
+                        {suggestion}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+          {errors.name && (
+            <Text className="text-sm text-red-500 mt-1">{errors.name}</Text>
+          )}
         </View>
 
         {/* Amount Input */}

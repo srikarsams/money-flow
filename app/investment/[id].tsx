@@ -217,8 +217,17 @@ export default function InvestmentDetailScreen() {
           </TouchableOpacity>
         )}
 
+        {/* View Portfolio Button */}
+        <Button
+          title="View Portfolio"
+          onPress={() => router.push(`/investment/portfolio/${encodeURIComponent(investment.name)}`)}
+          variant="primary"
+          icon="pie-chart-outline"
+          fullWidth
+        />
+
         {/* Action Buttons */}
-        <View className="flex-row gap-3 mb-6">
+        <View className="flex-row gap-3 mt-3 mb-6">
           <View className="flex-1">
             <Button
               title="Edit"

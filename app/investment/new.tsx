@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InvestmentForm } from '@/src/components/investment/InvestmentForm';
@@ -10,8 +10,10 @@ import { createInvestment } from '@/src/db/queries/investments';
 
 export default function NewInvestmentScreen() {
   const router = useRouter();
+  const { name: prefilledName } = useLocalSearchParams<{ name?: string }>();
   const insets = useSafeAreaInsets();
 
+  const decodedName = prefilledName ? decodeURIComponent(prefilledName) : undefined;
   const [types, setTypes] = useState<InvestmentTypeItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -52,6 +54,8 @@ export default function NewInvestmentScreen() {
     >
       <InvestmentForm
         types={types}
+        initialData={decodedName ? { name: decodedName } : undefined}
+        nameLocked={!!decodedName}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         loading={loading}

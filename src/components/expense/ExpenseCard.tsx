@@ -80,8 +80,12 @@ export function ExpenseCard({
 
         {/* Amount */}
         <View className="items-end">
-          <Text className="text-base font-semibold text-red-500 dark:text-red-400">
-            -{currencySymbol}
+          <Text className={`text-base font-semibold ${
+            expense.type === 'income'
+              ? 'text-green-500 dark:text-green-400'
+              : 'text-red-500 dark:text-red-400'
+          }`}>
+            {expense.type === 'income' ? '+' : '-'}{currencySymbol}
             {formatAmount(expense.amount)}
           </Text>
           {expense.imageUri && (

@@ -1,9 +1,13 @@
+// Transaction type
+export type TransactionType = 'expense' | 'income';
+
 // Category types
 export interface Category {
   id: string;
   name: string;
   icon: string;
   color: string;
+  type: TransactionType;
   isCustom: boolean;
   isActive: boolean;
   sortOrder: number;
@@ -11,13 +15,14 @@ export interface Category {
   updatedAt: string;
 }
 
-// Expense types
+// Expense types (also used for income transactions)
 export interface Expense {
   id: string;
   title?: string;
   amount: number;
   categoryId: string;
   category?: Category;
+  type: TransactionType;
   notes?: string;
   imageUri?: string;
   date: string;
@@ -29,6 +34,7 @@ export interface ExpenseInput {
   title?: string;
   amount: number;
   categoryId: string;
+  type: TransactionType;
   notes?: string;
   imageUri?: string;
   date: string;
@@ -114,3 +120,38 @@ export interface MonthlyStats {
   categoryBreakdown: CategoryStat[];
   dailyBreakdown: DailyStat[];
 }
+
+// Unified transaction types for Money Flow feature
+export type UnifiedTransactionType = 'expense' | 'income' | 'investment';
+
+export interface UnifiedTransaction {
+  id: string;
+  type: UnifiedTransactionType;
+  amount: number;
+  date: string;
+  title?: string;
+  // For expenses/income
+  category?: Category;
+  categoryId?: string;
+  // For investments
+  investmentName?: string;
+  investmentType?: InvestmentTypeItem;
+  notes?: string;
+  imageUri?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MoneyFlowSummary {
+  totalIncome: number;
+  totalExpenses: number;
+  totalInvestments: number;
+  liquidSavings: number; // Income - Expenses - Investments
+  expensePercentage: number;
+  investmentPercentage: number;
+  savingsPercentage: number;
+}
+
+export type AnalyticsTabType = 'all' | 'expenses' | 'income' | 'investments';
+export type AnalyticsPeriod = 'monthly' | 'yearly';
+export type TransactionFilterType = 'all' | 'income' | 'expense' | 'investment';

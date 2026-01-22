@@ -23,6 +23,7 @@ import {
   getNotificationSettings,
   saveNotificationSettings,
   requestNotificationPermissions,
+  isNotificationsSupported,
 } from '@/src/services/notificationService';
 
 interface SettingRowProps {
@@ -95,6 +96,7 @@ export default function SettingsScreen() {
   const [notificationTime, setNotificationTime] = useState('20:00');
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const notificationsSupported = isNotificationsSupported();
 
   const loadSettings = async () => {
     try {
@@ -301,39 +303,43 @@ export default function SettingsScreen() {
           />
         </Card>
 
-        {/* Notifications */}
-        <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-6 mb-2 px-1">
-          NOTIFICATIONS
-        </Text>
-        <Card>
-          <SettingRow
-            icon="notifications-outline"
-            iconColor="#F59E0B"
-            title="Daily Reminder"
-            subtitle="Get reminded to log expenses"
-            showArrow={false}
-            rightElement={
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={handleNotificationsToggle}
-                trackColor={{ false: '#CBD5E1', true: '#818CF8' }}
-                thumbColor={notificationsEnabled ? '#6366F1' : '#F1F5F9'}
-              />
-            }
-          />
-          {notificationsEnabled && (
-            <>
-              <View className="h-px bg-slate-100 dark:bg-slate-700 ml-13" />
+        {/* Notifications - only show when supported (not in Expo Go) */}
+        {notificationsSupported && (
+          <>
+            <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-6 mb-2 px-1">
+              NOTIFICATIONS
+            </Text>
+            <Card>
               <SettingRow
-                icon="time-outline"
+                icon="notifications-outline"
                 iconColor="#F59E0B"
-                title="Reminder Time"
-                subtitle={formatTime(notificationTime)}
-                onPress={() => setShowTimePicker(true)}
+                title="Daily Reminder"
+                subtitle="Get reminded to log expenses"
+                showArrow={false}
+                rightElement={
+                  <Switch
+                    value={notificationsEnabled}
+                    onValueChange={handleNotificationsToggle}
+                    trackColor={{ false: '#CBD5E1', true: '#818CF8' }}
+                    thumbColor={notificationsEnabled ? '#6366F1' : '#F1F5F9'}
+                  />
+                }
               />
-            </>
-          )}
-        </Card>
+              {notificationsEnabled && (
+                <>
+                  <View className="h-px bg-slate-100 dark:bg-slate-700 ml-13" />
+                  <SettingRow
+                    icon="time-outline"
+                    iconColor="#F59E0B"
+                    title="Reminder Time"
+                    subtitle={formatTime(notificationTime)}
+                    onPress={() => setShowTimePicker(true)}
+                  />
+                </>
+              )}
+            </Card>
+          </>
+        )}
 
         {/* Data */}
         <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-6 mb-2 px-1">
@@ -381,7 +387,7 @@ export default function SettingsScreen() {
       </ScrollView>
 
       {/* Time Picker Modal */}
-      {showTimePicker && (
+      {notificationsSupported && showTimePicker && (
         <DateTimePicker
           value={getTimePickerValue()}
           mode="time"
